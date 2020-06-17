@@ -129,15 +129,21 @@ function(libclc_configure_lib_source OUT_LIST)
     "DIRS;DEPS"
     ${ARGN})
 
+  message( "Configuring libclc source for the following directories: ${ARG_DIRS}" )
+
   # Enumerate SOURCES* files
   set( source_list )
   foreach( l ${ARG_DIRS} )
+
     foreach( s "SOURCES" "SOURCES_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}" )
+
       file( TO_CMAKE_PATH ${l}/${ARG_LIB_DIR}/${s} file_loc )
       file( TO_CMAKE_PATH ${LIBCLC_ROOT_DIR}/${file_loc} loc )
+
       # Prepend the location to give higher priority to
       # specialized implementation
       if( EXISTS ${loc} )
+        message( "\tFound SOURCES file: ${loc}" )
         # Make cmake configuration depends on the SOURCE file
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${loc})
         set( source_list ${loc} ${source_list} )
@@ -167,7 +173,6 @@ function(libclc_configure_lib_source OUT_LIST)
         # FIXME: This should really go away
         file( TO_CMAKE_PATH ${dir}/${f} src_loc )
         get_filename_component( fdir ${src_loc} DIRECTORY )
-
         set_source_files_properties( ${dir}/${f}
           PROPERTIES COMPILE_FLAGS "-I ${fdir}" )
       endif()

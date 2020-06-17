@@ -174,6 +174,7 @@ endif()
 find_program( PYTHON python )
 file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/gen_convert.py clc_script_loc )
 file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/generic/libspirv/gen_core_convert.py core_script_loc )
+file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ptx-nvidiacl/libspirv/gen_core_convert.py core_script_ptx_loc )
 file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/generic/libspirv/gen_convert.py spirv_script_loc )
 
 add_custom_command(
@@ -204,7 +205,7 @@ endif(LIBCLC_STANDALONE_BUILD)
 file( TO_CMAKE_PATH ${LIBCLC_LIBRARY_OUTPUT_INTDIR}/clc LIBCLC_LIBRARY_OUTPUT_INTDIR )
 
 foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
-	message( "BUILDING ${t}" )
+	message( "Building libclc target ${t}." )
 	string( REPLACE "-" ";" TRIPLE  ${t} )
 	list( GET TRIPLE 0 ARCH )
 	list( GET TRIPLE 1 VENDOR )
@@ -216,10 +217,19 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 	endif()
 
 	#nvptx is special
-	if( ${ARCH} STREQUAL nvptx OR ${ARCH} STREQUAL nvptx64 )
+	if( "${ARCH}" STREQUAL nvptx OR "${ARCH}" STREQUAL nvptx64 )
 		set( DARCH ptx )
+		if( "${OS}" STREQUAL nvidiacl )
+			add_custom_command(
+				OUTPUT convert-core-ptx.cl
+				COMMAND ${PYTHON} ${core_script_ptx_loc} > convert-core-ptx.cl
+				DEPENDS ${core_script_ptx_loc} )
+			add_custom_target( "generate_convert_core_ptx.cl" DEPENDS convert-core-ptx.cl )
+			set( convert_core_source convert-core-ptx.cl )
+		endif()
 	else()
 		set( DARCH ${ARCH} )
+		set( convert_core_source convert-core.cl )
 	endif()
 
 	set( lib_files )
@@ -231,7 +241,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 	libclc_configure_lib_source(libspirv_files
 		LIB_DIR libspirv
 		DIRS ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
-		DEPS convert-spirv.cl convert-core.cl)
+		DEPS convert-spirv.cl ${convert_core_source})
 
 	foreach( d ${${t}_devices} )
 		# Some targets don't have a specific GPU to target
